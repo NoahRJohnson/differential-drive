@@ -59,8 +59,7 @@ from math import sin, cos, pi
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from tf.broadcaster import TransformBroadcaster
-from std_msgs.msg import Int16
+from auto_rover.msg import EncCount
 
 #############################################################################
 class DiffTf:
@@ -78,9 +77,9 @@ class DiffTf:
         self.ticks_meter = float(rospy.get_param('ticks_meter', 50))  # The number of wheel encoder ticks per meter of travel
         self.base_width = float(rospy.get_param('~base_width', 0.245)) # The wheel base width in meters
         
-        self.base_frame_id = rospy.get_param('~base_frame_id','base_link') # the name of the base frame of the robot
-        self.odom_frame_id = rospy.get_param('~odom_frame_id', 'odom') # the name of the odometry reference frame
-        
+	self.base_frame_id = rospy.get_param('~base_frame_id','base_link') # the name of the base frame of the robot
+	self.odom_frame_id = rospy.get_param('~odom_frame_id', 'odom') # the name of the odometry reference frame
+
         self.encoder_min = rospy.get_param('encoder_min', -32768)
         self.encoder_max = rospy.get_param('encoder_max', 32768)
         self.encoder_low_wrap = rospy.get_param('wheel_low_wrap', (self.encoder_max - self.encoder_min) * 0.3 + self.encoder_min )
@@ -106,10 +105,8 @@ class DiffTf:
         self.then = rospy.Time.now()
         
         # subscriptions
-        rospy.Subscriber("lwheel", Int16, self.lwheelCallback)
-        rospy.Subscriber("rwheel", Int16, self.rwheelCallback)
+        rospy.Subscriber("/odom/encTicks", EncCount, self.encCallback)
         self.odomPub = rospy.Publisher("odom", Odometry, queue_size=10)
-        self.odomBroadcaster = TransformBroadcaster()
         
     #############################################################################
     def spin(self):
@@ -158,28 +155,22 @@ class DiffTf:
             if( th != 0):
                 self.th = self.th + th
                 
-            # publish the odom information
+	    # calculate the orientation
             quaternion = Quaternion()
             quaternion.x = 0.0
             quaternion.y = 0.0
             quaternion.z = sin( self.th / 2 )
             quaternion.w = cos( self.th / 2 )
-            self.odomBroadcaster.sendTransform(
-                (self.x, self.y, 0),
-                (quaternion.x, quaternion.y, quaternion.z, quaternion.w),
-                rospy.Time.now(),
-                self.base_frame_id,
-                self.odom_frame_id
-                )
             
+	    # publish the odom information
             odom = Odometry()
             odom.header.stamp = now
-            odom.header.frame_id = self.odom_frame_id
+            odom.header.frame_id = self.odom_frame_id # coordinate frame of pose
             odom.pose.pose.position.x = self.x
             odom.pose.pose.position.y = self.y
-            odom.pose.pose.position.z = 0
+            odom.pose.pose.position.z = 0 # assume 2D
             odom.pose.pose.orientation = quaternion
-            odom.child_frame_id = self.base_frame_id
+            odom.child_frame_id = self.base_frame_id # coordinate frame of twist
             odom.twist.twist.linear.x = self.dx
             odom.twist.twist.linear.y = 0
             odom.twist.twist.angular.z = self.dr
@@ -187,32 +178,28 @@ class DiffTf:
             
             
 
+    #############################################################################
+    def encCallback(self, msg):
+    #############################################################################
+        Lenc = msg.leftTicks
+	Renc = msg.rightTicks
 
-    #############################################################################
-    def lwheelCallback(self, msg):
-    #############################################################################
-        enc = msg.data
-        if (enc < self.encoder_low_wrap and self.prev_lencoder > self.encoder_high_wrap):
+        if (Lenc < self.encoder_low_wrap and self.prev_lencoder > self.encoder_high_wrap):
             self.lmult = self.lmult + 1
             
-        if (enc > self.encoder_high_wrap and self.prev_lencoder < self.encoder_low_wrap):
+        if (Lenc > self.encoder_high_wrap and self.prev_lencoder < self.encoder_low_wrap):
             self.lmult = self.lmult - 1
-            
-        self.left = 1.0 * (enc + self.lmult * (self.encoder_max - self.encoder_min)) 
-        self.prev_lencoder = enc
-        
-    #############################################################################
-    def rwheelCallback(self, msg):
-    #############################################################################
-        enc = msg.data
-        if(enc < self.encoder_low_wrap and self.prev_rencoder > self.encoder_high_wrap):
+
+	if(Renc < self.encoder_low_wrap and self.prev_rencoder > self.encoder_high_wrap):
             self.rmult = self.rmult + 1
         
-        if(enc > self.encoder_high_wrap and self.prev_rencoder < self.encoder_low_wrap):
+        if(Renc > self.encoder_high_wrap and self.prev_rencoder < self.encoder_low_wrap):
             self.rmult = self.rmult - 1
             
-        self.right = 1.0 * (enc + self.rmult * (self.encoder_max - self.encoder_min))
-        self.prev_rencoder = enc
+        self.left = 1.0 * (Lenc + self.lmult * (self.encoder_max - self.encoder_min)) 
+	self.right = 1.0 * (encRenc+ self.rmult * (self.encoder_max - self.encoder_min))
+        self.prev_lencoder = Lenc
+	self.prev_rencoder = Renc
 
 #############################################################################
 #############################################################################
