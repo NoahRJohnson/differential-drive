@@ -9,28 +9,21 @@ http://wiki.ros.org/differential_drive
 Jon Stephan&rsquo;s repository location::
 https://github.com/jfstepha/differential-drive
 
-diff_tf has been modified to read a custom message
-with the following definition:
-'''
+diff_tf and pid_velocity have both been modified to
+read a custom message with the following definition:
+```python
 int32 leftTicks
 int32 rightTicks
-'''
-
-It reads these messages from the "/odom/encTicks" topic,
-but that can easily be remapped in your launch file. It
+```
+They read these messages from the "/odom/encTicks" topic,
+but that can easily be remapped in your launch file. diff_tf
 also no longer publishes an odom -> base_link transform
-to tf, since this is meant o be used as input to the
+to tf, since it is meant to be used as input to the
 robot_localization package, which will publish its own
-transform after fusing this dead reckoning estimate with
-other sensors.
-
-To use your own custom message, simply change the following
-two lines in diff_tf.py:
-'''
-from auto_rover.msg import EncCount
-...
-rospy.Subscriber("/odom/encTicks", EncCount, self.encCallback)
-'''
+transform after fusing that dead reckoning estimate with
+other sensors. A 'which_wheel' param was added to
+pid_velocity, to tell the code which field of my custom
+message to read.
 
 == License
 
