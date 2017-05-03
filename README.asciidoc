@@ -1,14 +1,7 @@
 = differential-drive
 
-This is the `differential_drive` ROS package written by Jon Stephan.
-The originally published version of the package was released on
-Google Code. When Google Code was archived, a copy was pulled into
-GitHub.
-
-The original package was written for ROS Groovy. In 2015 Mark Rose
-made minor source changes to update the package for ROS Hydro and above,
-moving to catkin, removing code warnings,
-and changing the package layout to match current ROS guidelines.
+This is a slightly modified version of the `differential_drive`
+ROS package written by Jon Stephan, and modified by Mark Rose.
 
 ROS package page::
 http://wiki.ros.org/differential_drive
@@ -16,17 +9,30 @@ http://wiki.ros.org/differential_drive
 Jon Stephan&rsquo;s repository location::
 https://github.com/jfstepha/differential-drive
 
-Original, archived code repository::
-https://code.google.com/p/differential-drive/
+diff_tf has been modified to read a custom message
+with the following definition:
+'''
+int32 leftTicks
+int32 rightTicks
+'''
 
-== API Docs
+It reads these messages from the "/odom/encTicks" topic,
+but that can easily be remapped in your launch file. It
+also no longer publishes an odom -> base_link transform
+to tf, since this is meant o be used as input to the
+robot_localization package, which will publish its own
+transform after fusing this dead reckoning estimate with
+other sensors.
 
-Please refer to the ROS Wiki page for this package for API information:
-http://wiki.ros.org/differential_drive.
+To use your own custom message, simply change the following
+two lines in diff_tf.py:
+'''
+from auto_rover.msg import EncCount
+...
+rospy.Subscriber("/odom/encTicks", EncCount, self.encCallback)
+'''
 
 == License
 
 The code is licensed under the terms of the Gnu General Public
 License, Version 3. See the file `LICENSE` for details.
-
-
