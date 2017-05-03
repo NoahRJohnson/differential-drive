@@ -22,9 +22,11 @@
 import rospy
 import roslib
 
-from std_msgs.msg import Int16
+from std_msgs.msg import Int8
 from std_msgs.msg import Float32
+from auto_rover.msg import EncCount
 from numpy import array
+import sys
 
     
 ######################################################
@@ -56,16 +58,16 @@ class PidVelocity():
         self.prev_encoder = 0
         
         ### get parameters #### 
-        self.Kp = rospy.get_param('~Kp',10)
-        self.Ki = rospy.get_param('~Ki',10)
-        self.Kd = rospy.get_param('~Kd',0.001)
-        self.out_min = rospy.get_param('~out_min',-255)
-        self.out_max = rospy.get_param('~out_max',255)
-        self.rate = rospy.get_param('~rate',30)
-        self.rolling_pts = rospy.get_param('~rolling_pts',2)
-        self.timeout_ticks = rospy.get_param('~timeout_ticks',4)
+        self.Kp = rospy.get_param('Kp',10)
+        self.Ki = rospy.get_param('Ki',10)
+        self.Kd = rospy.get_param('Kd',0.001)
+        self.out_min = rospy.get_param('out_min',-255)
+        self.out_max = rospy.get_param('out_max',255)
+        self.rate = rospy.get_param('~rate',30) # private param
+        self.rolling_pts = rospy.get_param('rolling_pts',2)
+        self.timeout_ticks = rospy.get_param('timeout_ticks',4)
         self.ticks_per_meter = rospy.get_param('ticks_meter', 20)
-        self.vel_threshold = rospy.get_param('~vel_threshold', 0.001)
+        self.vel_threshold = rospy.get_param('vel_threshold', 0.001)
         self.encoder_min = rospy.get_param('encoder_min', -32768)
         self.encoder_max = rospy.get_param('encoder_max', 32768)
         self.encoder_low_wrap = rospy.get_param('wheel_low_wrap', (self.encoder_max - self.encoder_min) * 0.3 + self.encoder_min )
@@ -74,11 +76,20 @@ class PidVelocity():
         self.wheel_latest = 0.0
         self.prev_pid_time = rospy.Time.now()
         rospy.logdebug("%s got Kp:%0.3f Ki:%0.3f Kd:%0.3f tpm:%0.3f" % (self.nodename, self.Kp, self.Ki, self.Kd, self.ticks_per_meter))
-        
+
+	if rospy.has_param('~which_wheel'): # private param
+		self.which_wheel = rospy.get_param('~which_wheel')
+	else:
+		rospy.logfatal("which_wheel parameter not set. Can't decode encoder tick counts without it, shutting down.")
+		sys.exit(2)
+	if self.which_wheel not in ['left', 'right']:
+		rospy.logfatal("which_wheel parameter not a valid value. Must be left or right. Shutting down.")
+		sys.exit(2)
+
         #### subscribers/publishers 
-        rospy.Subscriber("wheel", Int16, self.wheelCallback) 
+        rospy.Subscriber("/odom/encTicks", EncCount, self.ticksCallback) 
         rospy.Subscriber("wheel_vtarget", Float32, self.targetCallback) 
-        self.pub_motor = rospy.Publisher('motor_cmd',Float32, queue_size=10) 
+        self.pub_motor = rospy.Publisher('motor_cmd',Int8, queue_size=10) 
         self.pub_vel = rospy.Publisher('wheel_vel', Float32, queue_size=10)
    
         
@@ -192,9 +203,16 @@ class PidVelocity():
 
 
     #####################################################
-    def wheelCallback(self, msg):
+    def ticksCallback(self, msg):
     ######################################################
-        enc = msg.data
+	if self.which_wheel == 'left':
+		enc = msg.leftTicks
+	elif self.which_wheel == 'right':
+        	enc = msg.rightTicks
+	else:
+		rospy.logfatal("which_wheel parameter somehow not valid in a callback, even though it's been checked before. Something really strange must have happened. Shutting down.")
+		sys.exit(2)
+
         if (enc < self.encoder_low_wrap and self.prev_encoder > self.encoder_high_wrap) :
             self.wheel_mult = self.wheel_mult + 1
             

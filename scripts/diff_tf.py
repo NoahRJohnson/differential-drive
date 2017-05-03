@@ -75,10 +75,10 @@ class DiffTf:
         #### parameters #######
         self.rate = rospy.get_param('~rate',10.0)  # the rate at which to publish the transform
         self.ticks_meter = float(rospy.get_param('ticks_meter', 50))  # The number of wheel encoder ticks per meter of travel
-        self.base_width = float(rospy.get_param('~base_width', 0.245)) # The wheel base width in meters
+        self.base_width = float(rospy.get_param('base_width', 0.245)) # The wheel base width in meters
         
-	self.base_frame_id = rospy.get_param('~base_frame_id','base_link') # the name of the base frame of the robot
-	self.odom_frame_id = rospy.get_param('~odom_frame_id', 'odom') # the name of the odometry reference frame
+	self.base_frame_id = rospy.get_param('base_frame_id','base_link') # the name of the base frame of the robot
+	self.odom_frame_id = rospy.get_param('odom_frame_id', 'odom') # the name of the odometry reference frame
 
         self.encoder_min = rospy.get_param('encoder_min', -32768)
         self.encoder_max = rospy.get_param('encoder_max', 32768)
@@ -170,10 +170,12 @@ class DiffTf:
             odom.pose.pose.position.y = self.y
             odom.pose.pose.position.z = 0 # assume 2D
             odom.pose.pose.orientation = quaternion
+            odom.pose.covariance = [0] * 36
             odom.child_frame_id = self.base_frame_id # coordinate frame of twist
             odom.twist.twist.linear.x = self.dx
             odom.twist.twist.linear.y = 0
             odom.twist.twist.angular.z = self.dr
+	    odom.twist.covariance = [0] * 36
             self.odomPub.publish(odom)
             
             
@@ -197,7 +199,7 @@ class DiffTf:
             self.rmult = self.rmult - 1
             
         self.left = 1.0 * (Lenc + self.lmult * (self.encoder_max - self.encoder_min)) 
-	self.right = 1.0 * (encRenc+ self.rmult * (self.encoder_max - self.encoder_min))
+	self.right = 1.0 * (Renc+ self.rmult * (self.encoder_max - self.encoder_min))
         self.prev_lencoder = Lenc
 	self.prev_rencoder = Renc
 
