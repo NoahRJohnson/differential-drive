@@ -1,7 +1,5 @@
 = differential-drive
 
-
-
 This is a slightly modified version of the `differential_drive`
 ROS package written by Jon Stephan, and modified by Mark Rose.
 
@@ -19,7 +17,12 @@ int32 rightTicks
 '''
 
 It reads these messages from the "/odom/encTicks" topic,
-but that can easily be remapped in your launch file.
+but that can easily be remapped in your launch file. It
+also no longer publishes an odom -> base_link transform
+to tf, since this is meant o be used as input to the
+robot_localization package, which will publish its own
+transform after fusing this dead reckoning estimate with
+other sensors.
 
 To use your own custom message, simply change the following
 two lines in diff_tf.py:
