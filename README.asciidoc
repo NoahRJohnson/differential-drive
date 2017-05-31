@@ -28,7 +28,7 @@ message to read.
 pid_velocity was also modified to use a velocity PID controller
 instead of a positional one, i.e.
 ```python
-self.motor = self.motor + (self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * self.derivative)
+self.motor += (self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * self.derivative)
 ```
 instead of
 ```python
