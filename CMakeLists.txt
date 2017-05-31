@@ -150,7 +150,7 @@ catkin_package(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
  install(PROGRAMS
-   scripts/diff_tf.py
+   scripts/diff_odom.py
    scripts/pid_velocity.py
    scripts/twist_to_motors.py
    scripts/virtual_joystick.py
@@ -172,11 +172,9 @@ catkin_package(
 # )
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
+install(DIRECTORY images/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/images
+  PATTERN ".svn" EXCLUDE)
 
 #############
 ## Testing ##

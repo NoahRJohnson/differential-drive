@@ -47,7 +47,7 @@ class MainWindow(QtGui.QMainWindow):
     def initUI(self):      
     #####################################################################    
         
-        img_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + "/../images/crosshair.jpg"
+        img_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))) + "/../../share/differential_drive/images/crosshair.jpg"
         rospy.loginfo("initUI img_path: %s" % img_path)
 
         self.statusBar()

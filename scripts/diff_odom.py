@@ -57,7 +57,6 @@ roslib.load_manifest('differential_drive')
 from math import sin, cos, pi
 
 from geometry_msgs.msg import Quaternion
-from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from auto_rover.msg import EncCount
 
@@ -165,17 +164,26 @@ class DiffTf:
 	    # publish the odom information
             odom = Odometry()
             odom.header.stamp = now
+
+	    # pose data is ignored by EKF
             odom.header.frame_id = self.odom_frame_id # coordinate frame of pose
             odom.pose.pose.position.x = self.x
             odom.pose.pose.position.y = self.y
             odom.pose.pose.position.z = 0 # assume 2D
             odom.pose.pose.orientation = quaternion
             odom.pose.covariance = [0] * 36
+
+	    # twist data is fused into EKF
             odom.child_frame_id = self.base_frame_id # coordinate frame of twist
             odom.twist.twist.linear.x = self.dx
-            odom.twist.twist.linear.y = 0
-            odom.twist.twist.angular.z = self.dr
-	    odom.twist.covariance = [0] * 36
+            odom.twist.twist.linear.y = 0 # wheels only go straight
+	    odom.twist.twist.linear.z = 0 # assumption of 2D
+	    odom.twist.twist.angular.x = 0 # assume lies flat on ground
+	    odom.twist.twist.angular.y = 0 # assume flat on ground
+            odom.twist.twist.angular.z = self.dr # angular velocity of yaw, rad/sec
+	    odom.twist.covariance = [0] * 36 # approx. of skid steering, so angular velocity variance should be HIGH
+	    odom.twist.covariance[0] = 0.001 # variance^2 of linear velocity in x direction
+	    odom.twist.covariance[35] = 0.03 # variance^@ of rotation about z axis
             self.odomPub.publish(odom)
             
             

@@ -58,8 +58,8 @@ class PidVelocity():
         self.prev_encoder = 0
         
         ### get parameters #### 
-        self.Kp = rospy.get_param('Kp',10)
-        self.Ki = rospy.get_param('Ki',10)
+        self.Kp = rospy.get_param('Kp',1)
+        self.Ki = rospy.get_param('Ki',1)
         self.Kd = rospy.get_param('Kd',0.001)
         self.out_min = rospy.get_param('out_min',-255)
         self.out_max = rospy.get_param('out_max',255)
@@ -72,8 +72,7 @@ class PidVelocity():
         self.encoder_max = rospy.get_param('encoder_max', 32768)
         self.encoder_low_wrap = rospy.get_param('wheel_low_wrap', (self.encoder_max - self.encoder_min) * 0.3 + self.encoder_min )
         self.encoder_high_wrap = rospy.get_param('wheel_high_wrap', (self.encoder_max - self.encoder_min) * 0.7 + self.encoder_min )
-        self.prev_vel = [0.0] * self.rolling_pts
-        self.wheel_latest = 0.0
+	self.prev_vel = [0.0] * self.rolling_pts
         self.prev_pid_time = rospy.Time.now()
         rospy.logdebug("%s got Kp:%0.3f Ki:%0.3f Kd:%0.3f tpm:%0.3f" % (self.nodename, self.Kp, self.Ki, self.Kd, self.ticks_per_meter))
 
@@ -85,6 +84,11 @@ class PidVelocity():
 	if self.which_wheel not in ['left', 'right']:
 		rospy.logfatal("which_wheel parameter not a valid value. Must be left or right. Shutting down.")
 		sys.exit(2)
+
+	# since this node may be starting up when the microcontroller already has
+	# non-zero encoder counts, grab one message and treat it as our starting point
+	beginning_enc_count = rospy.wait_for_message("/odom/encTicks", EncCount)
+	self.ticksCallback(beginning_enc_count)
 
         #### subscribers/publishers 
         rospy.Subscriber("/odom/encTicks", EncCount, self.ticksCallback) 
@@ -184,7 +188,7 @@ class PidVelocity():
         self.derivative = (self.error - self.previous_error) / pid_dt
         self.previous_error = self.error
     
-        self.motor = (self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * self.derivative)
+        self.motor += (self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * self.derivative)
     
         if self.motor > self.out_max:
             self.motor = self.out_max
