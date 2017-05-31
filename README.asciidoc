@@ -1,7 +1,7 @@
 = differential-drive
 
 This is a slightly modified version of the `differential_drive`
-ROS package written by Jon Stephan, and modified by Mark Rose.
+ROS package written by Jon Stephan.
 
 ROS package page::
 http://wiki.ros.org/differential_drive
@@ -15,8 +15,8 @@ read a custom message with the following definition:
 int32 leftTicks
 int32 rightTicks
 ```
-They read these messages from the "/odom/encTicks" topic,
-but that can easily be remapped in your launch file. diff_tf
+They read these messages from the hardcoded "/odom/encTicks" topic,
+so remap that in your ROS launch file. diff_tf
 also no longer publishes an odom -> base_link transform
 to tf, since it is meant to be used as input to the
 robot_localization package, which will publish its own
@@ -24,6 +24,17 @@ transform after fusing that dead reckoning estimate with
 other sensors. A 'which_wheel' param was added to
 pid_velocity, to tell the code which field of my custom
 message to read.
+
+pid_velocity was also modified to use a velocity PID controller
+instead of a positional one, i.e.
+```python
+self.motor = self.motor + (self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * self.derivative)
+```
+instead of
+```python
+self.motor = (self.Kp * self.error) + (self.Ki * self.integral) + (self.Kd * self.derivative)
+```
+I believe this is better suited for controlling wheels via PWM output.
 
 == License
 
